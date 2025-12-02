@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --success: 142.1 76.2% 36.3%;
+  --success-foreground: 355.7 100% 97.3%;
+  --border: 214.3 31.8% 91.4%;
+  --ring: 221.2 83.2% 53.3%;
+}
+
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --primary: 217.2 91.2% 59.8%;
+  --primary-foreground: 222.2 47.4% 11.2%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --success: 142.1 70.6% 45.3%;
+  --success-foreground: 144.9 80.4% 10%;
+  --border: 217.2 32.6% 17.5%;
+  --ring: 224.3 76.3% 48%;
+}
+
+* {
+  @apply border-border;
+}
+
+body {
+  @apply bg-background text-foreground;
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Mobile thumb zone optimization */
+.thumb-zone {
+  @apply fixed bottom-0 left-0 right-0 pb-safe;
+}
+
+/* Safe area for mobile devices */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Swipe card styles */
+.swipe-card {
+  @apply touch-none select-none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Haptic feedback animation */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+  20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Flash effects */
+@keyframes flash-green {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: hsl(var(--success) / 0.3); }
+}
+
+@keyframes flash-red {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: hsl(var(--destructive) / 0.3); }
+}
+
+.flash-correct {
+  animation: flash-green 0.3s ease-in-out;
+}
+
+.flash-wrong {
+  animation: flash-red 0.3s ease-in-out;
+}
+
+/* Progress bar animation */
+.progress-bar {
+  @apply transition-all duration-300 ease-out;
+}
+
+/* Battle VS divider */
+.vs-divider {
+  @apply relative flex items-center justify-center;
+}
+
+.vs-divider::before,
+.vs-divider::after {
+  content: '';
+  @apply flex-1 border-t border-border;
+}
+
+/* Card stack depth effect */
+.card-stack-1 {
+  transform: translateY(4px) scale(0.98);
+  opacity: 0.7;
+}
+
+.card-stack-2 {
+  transform: translateY(8px) scale(0.96);
+  opacity: 0.5;
+}
+
+.card-stack-3 {
+  transform: translateY(12px) scale(0.94);
+  opacity: 0.3;
+}
