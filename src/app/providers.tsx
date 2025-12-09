@@ -12,19 +12,27 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Get initial session
     const initAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        // Fetch user profile
-        const { data: profile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .single();
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
         
-        setUser(profile);
-      } else {
+        if (user) {
+          // Fetch user profile
+          const { data: profile } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          
+          setUser(profile);
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
         setUser(null);
+      } finally {
+        // Always set loading to false after auth check
+        setLoading(false);
       }
     };
     

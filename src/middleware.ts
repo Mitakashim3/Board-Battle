@@ -1,14 +1,17 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 
-// Routes that require authentication
-const protectedRoutes = ['/reviewer', '/battle', '/profile', '/dashboard'];
+// Routes that require authentication (student-only)
+const studentRoutes = ['/reviewer', '/battle', '/profile', '/dashboard'];
 
-// Routes that require admin role
+// Routes that require admin role (admin-only)
 const adminRoutes = ['/admin'];
 
-// Routes that should redirect to dashboard if already authenticated
+// Routes that should redirect if already authenticated
 const authRoutes = ['/login', '/signup'];
+
+// Admin-specific auth route
+const adminAuthRoute = '/auth/admin-portal';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -16,25 +19,21 @@ export async function middleware(request: NextRequest) {
   // Update session and get user
   const { response, user, supabase } = await updateSession(request);
 
-  // Check if route is protected
-  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+  // Check route types
+  const isStudentRoute = studentRoutes.some(route => pathname.startsWith(route));
   const isAdminRoute = adminRoutes.some(route => pathname.startsWith(route));
   const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
+  const isAdminAuthRoute = pathname.startsWith(adminAuthRoute);
 
   // Redirect to login if accessing protected route without auth
-  if ((isProtectedRoute || isAdminRoute) && !user) {
+  if ((isStudentRoute || isAdminRoute) && !user) {
     const redirectUrl = new URL('/login', request.url);
     redirectUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Redirect to dashboard if accessing auth routes while logged in
-  if (isAuthRoute && user) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-
-  // Check admin access
-  if (isAdminRoute && user) {
+  // If user is logged in, check their role for proper routing
+  if (user) {
     // Fetch user role from database
     const { data: userData } = await supabase
       .from('users')
@@ -42,9 +41,33 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .single();
 
-    if (!userData || userData.role !== 'admin') {
-      // Non-admins get 404 (security through obscurity + access control)
+    const isAdmin = userData?.role === 'admin';
+
+    // ADMIN RESTRICTIONS:
+    // Admins cannot access student routes - redirect to admin dashboard
+    if (isAdmin && isStudentRoute) {
+      return NextResponse.redirect(new URL('/admin', request.url));
+    }
+
+    // Admins at regular auth routes should go to admin dashboard
+    if (isAdmin && isAuthRoute) {
+      return NextResponse.redirect(new URL('/admin', request.url));
+    }
+
+    // STUDENT RESTRICTIONS:
+    // Non-admins cannot access admin routes - show 404
+    if (!isAdmin && isAdminRoute) {
       return NextResponse.rewrite(new URL('/not-found', request.url));
+    }
+
+    // Non-admins at admin auth route should go to regular login
+    if (!isAdmin && isAdminAuthRoute) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
+    // Regular students at auth routes go to dashboard
+    if (!isAdmin && isAuthRoute) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
     }
   }
 
