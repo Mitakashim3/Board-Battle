@@ -56,6 +56,7 @@ export const useUserStore = create<UserStore>()(
       partialize: (state) => ({
         user: state.user,
         isAuthenticated: state.isAuthenticated,
+        // Don't persist isLoading - always start fresh
       }),
     }
   )

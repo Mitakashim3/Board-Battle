@@ -220,12 +220,33 @@ CREATE POLICY "Users can insert own battle answers" ON public.battle_answers
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.users (id, username, email, role)
+    INSERT INTO public.users (id, username, email, role, coins, energy, max_energy, mmr)
     VALUES (
         NEW.id,
-        COALESCE(NEW.raw_user_meta_data->>'username', split_part(NEW.email, '@', 1)),
+        COALESCE(
+            NEW.raw_user_meta_data->>'username', 
+            LOWER(REGEXP_REPLACE(split_part(NEW.email, '@', 1), '[^a-zA-Z0-9]', '', 'g')) || FLOOR(RANDOM() * 10000)::TEXT
+        ),
         NEW.email,
-        'student'
+        'student',
+        100,  -- Starting coins
+        5,    -- Starting energy
+        5,    -- Max energy
+        1000  -- Starting MMR
+    );
+    RETURN NEW;
+EXCEPTION WHEN unique_violation THEN
+    -- If username already exists, try with a different random suffix
+    INSERT INTO public.users (id, username, email, role, coins, energy, max_energy, mmr)
+    VALUES (
+        NEW.id,
+        LOWER(REGEXP_REPLACE(split_part(NEW.email, '@', 1), '[^a-zA-Z0-9]', '', 'g')) || FLOOR(RANDOM() * 100000)::TEXT,
+        NEW.email,
+        'student',
+        100,
+        5,
+        5,
+        1000
     );
     RETURN NEW;
 END;

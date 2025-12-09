@@ -10,29 +10,50 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
   
   useEffect(() => {
+    let mounted = true;
+    
     // Get initial session
     const initAuth = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError) {
+          console.error('Error fetching user:', userError);
+          if (mounted) {
+            setUser(null);
+            setLoading(false);
+          }
+          return;
+        }
         
         if (user) {
           // Fetch user profile
-          const { data: profile } = await supabase
+          const { data: profile, error: profileError } = await supabase
             .from('users')
             .select('*')
             .eq('id', user.id)
             .single();
           
-          setUser(profile);
+          if (profileError) {
+            console.error('Error fetching profile:', profileError);
+          }
+          
+          if (mounted) {
+            setUser(profile || null);
+            setLoading(false);
+          }
         } else {
-          setUser(null);
+          if (mounted) {
+            setUser(null);
+            setLoading(false);
+          }
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
-        setUser(null);
-      } finally {
-        // Always set loading to false after auth check
-        setLoading(false);
+        if (mounted) {
+          setUser(null);
+          setLoading(false);
+        }
       }
     };
     
@@ -41,6 +62,8 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event);
+        
         if (event === 'SIGNED_IN' && session?.user) {
           const { data: profile } = await supabase
             .from('users')
@@ -48,14 +71,19 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
             .eq('id', session.user.id)
             .single();
           
-          setUser(profile);
+          if (mounted) {
+            setUser(profile);
+          }
         } else if (event === 'SIGNED_OUT') {
-          setUser(null);
+          if (mounted) {
+            setUser(null);
+          }
         }
       }
     );
     
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, [supabase, setUser, setLoading]);

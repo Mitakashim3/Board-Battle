@@ -158,47 +158,72 @@ export default function AdminQuestionsPage() {
   
   // Parse bulk text input (for pasting multiple questions)
   const handleBulkPaste = (text: string) => {
-    // Simple parser for format:
-    // Q: Question text
-    // A: Option A
-    // B: Option B
-    // C: Option C
-    // D: Option D
-    // Answer: A
-    // ---
+    // Improved parser that handles multiple formats:
+    // 1. Questions separated by ---
+    // 2. Questions detected by Q: pattern
     
-    const blocks = text.split('---').filter(b => b.trim());
+    if (!text.trim()) return;
+    
+    // First, try to split by --- separator
+    let blocks: string[] = [];
+    
+    if (text.includes('---')) {
+      blocks = text.split('---').filter(b => b.trim());
+    } else {
+      // If no ---, try to split by detecting Q: patterns
+      const qPattern = /(?=Q:\s)/gi;
+      blocks = text.split(qPattern).filter(b => b.trim());
+    }
+    
     const parsed: QuestionForm[] = [];
     
     for (const block of blocks) {
-      const lines = block.trim().split('\n').map(l => l.trim());
-      const question: QuestionForm = { ...emptyQuestion, options: [...emptyQuestion.options] };
+      const lines = block.trim().split('\n').map(l => l.trim()).filter(l => l);
+      const question: QuestionForm = { 
+        ...emptyQuestion, 
+        options: emptyQuestion.options.map(o => ({ ...o }))
+      };
       
       for (const line of lines) {
-        if (line.startsWith('Q:')) {
-          question.questionText = line.slice(2).trim();
-        } else if (line.startsWith('A:')) {
-          question.options[0].text = line.slice(2).trim();
-        } else if (line.startsWith('B:')) {
-          question.options[1].text = line.slice(2).trim();
-        } else if (line.startsWith('C:')) {
-          question.options[2].text = line.slice(2).trim();
-        } else if (line.startsWith('D:')) {
-          question.options[3].text = line.slice(2).trim();
-        } else if (line.toLowerCase().startsWith('answer:')) {
+        // Question text
+        if (line.toUpperCase().startsWith('Q:') || line.toUpperCase().startsWith('QUESTION:')) {
+          const colonIndex = line.indexOf(':');
+          question.questionText = line.slice(colonIndex + 1).trim();
+        } 
+        // Options - handle both "A:" and "A." formats
+        else if (/^A[:.]\s*/i.test(line)) {
+          question.options[0].text = line.replace(/^A[:.]\s*/i, '').trim();
+        } else if (/^B[:.]\s*/i.test(line)) {
+          question.options[1].text = line.replace(/^B[:.]\s*/i, '').trim();
+        } else if (/^C[:.]\s*/i.test(line)) {
+          question.options[2].text = line.replace(/^C[:.]\s*/i, '').trim();
+        } else if (/^D[:.]\s*/i.test(line)) {
+          question.options[3].text = line.replace(/^D[:.]\s*/i, '').trim();
+        } 
+        // Answer
+        else if (line.toLowerCase().startsWith('answer:') || line.toLowerCase().startsWith('correct:')) {
           const answer = line.split(':')[1]?.trim().toUpperCase();
-          question.correctOptionId = ['A', 'B', 'C', 'D'].indexOf(answer);
-        } else if (line.toLowerCase().startsWith('difficulty:')) {
+          const idx = ['A', 'B', 'C', 'D'].indexOf(answer.charAt(0));
+          if (idx >= 0) question.correctOptionId = idx;
+        } 
+        // Difficulty
+        else if (line.toLowerCase().startsWith('difficulty:')) {
           const diff = line.split(':')[1]?.trim().toLowerCase();
           if (['easy', 'medium', 'hard'].includes(diff)) {
             question.difficulty = diff as Difficulty;
           }
-        } else if (line.toLowerCase().startsWith('explanation:')) {
+        } 
+        // Explanation
+        else if (line.toLowerCase().startsWith('explanation:')) {
           question.explanation = line.split(':').slice(1).join(':').trim();
         }
       }
       
-      if (question.questionText && question.options[0].text) {
+      // Validate question has minimum required fields
+      const hasQuestion = question.questionText.length >= 5;
+      const hasOptions = question.options.filter(o => o.text.trim()).length >= 2;
+      
+      if (hasQuestion && hasOptions) {
         parsed.push(question);
       }
     }
@@ -237,21 +262,40 @@ export default function AdminQuestionsPage() {
             <summary className="cursor-pointer font-medium text-foreground">
               📋 Bulk Paste (Advanced)
             </summary>
-            <div className="mt-4">
+            <div className="mt-4 space-y-3">
               <Textarea
                 placeholder={`Paste questions in format:
-Q: Question text
+
+Q: Question text here?
+A: First option
+B: Second option
+C: Third option
+D: Fourth option
+Answer: A
+Difficulty: medium
+Explanation: Why this is correct
+---
+Q: Next question...
 A: Option A
 B: Option B
 C: Option C
 D: Option D
-Answer: A
-Difficulty: medium
----
-(next question)`}
-                rows={10}
+Answer: B
+Difficulty: easy
+---`}
+                rows={12}
                 onChange={(e) => handleBulkPaste(e.target.value)}
               />
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">
+                  Separate questions with <code className="px-1 py-0.5 bg-secondary rounded">---</code>
+                </span>
+                {questions.length > 0 && questions[0].questionText && (
+                  <span className="text-success font-medium">
+                    ✓ {questions.length} question{questions.length > 1 ? 's' : ''} detected
+                  </span>
+                )}
+              </div>
             </div>
           </details>
         </Card>

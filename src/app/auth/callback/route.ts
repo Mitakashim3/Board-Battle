@@ -76,25 +76,47 @@ export async function GET(request: Request) {
 
       if (!existingUser) {
         // Create user profile for OAuth users
+        // Generate username from display name or email
         const displayName = data.user.user_metadata?.full_name 
           || data.user.user_metadata?.name 
           || data.user.email?.split('@')[0] 
           || 'Player';
+        
+        // Create a unique username (add random suffix to avoid conflicts)
+        const baseUsername = displayName.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 40);
+        const username = `${baseUsername}${Math.floor(Math.random() * 10000)}`;
 
         const avatarUrl = data.user.user_metadata?.avatar_url 
-          || data.user.user_metadata?.picture;
+          || data.user.user_metadata?.picture
+          || null;
 
-        await supabase.from('users').insert({
+        const { error: insertError } = await supabase.from('users').insert({
           id: data.user.id,
+          username: username,
           email: data.user.email,
-          display_name: displayName,
           avatar_url: avatarUrl,
           role: 'student',
-          coins: 100, // Starting coins
+          coins: 100,
           energy: 5,
           max_energy: 5,
           mmr: 1000,
         });
+
+        if (insertError) {
+          console.error('Failed to create user profile:', insertError.message);
+        }
+      }
+
+      // Check user role to determine redirect destination
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+
+      // Admins go to admin dashboard, students go to regular dashboard
+      if (userProfile?.role === 'admin') {
+        return NextResponse.redirect(new URL('/admin', requestUrl.origin));
       }
     }
 
