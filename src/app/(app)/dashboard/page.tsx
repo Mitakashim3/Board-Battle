@@ -38,6 +38,9 @@ export default function DashboardPage() {
 
   // Fetch data
   useEffect(() => {
+    // Wait for user to be available
+    if (!user) return;
+    
     async function fetchData() {
       setIsLoading(true);
       
@@ -47,15 +50,12 @@ export default function DashboardPage() {
         .order('exam_type', { ascending: true })
         .order('name', { ascending: true });
       
-      if (user) {
-        const { data: progressData } = await supabase
-          .from('user_progress')
-          .select('*')
-          .eq('user_id', user.id);
-        
-        setProgress(progressData || []);
-      }
+      const { data: progressData } = await supabase
+        .from('user_progress')
+        .select('*')
+        .eq('user_id', user.id);
       
+      setProgress(progressData || []);
       setSubjects(subjectsData || []);
       setIsLoading(false);
     }

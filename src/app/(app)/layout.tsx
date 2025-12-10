@@ -3,7 +3,6 @@
 import { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { Sidebar } from '@/components/layout';
-import { useUserStore } from '@/stores';
 
 export default function AppLayout({
   children,
@@ -11,7 +10,6 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const bgShapesRef = useRef<HTMLDivElement>(null);
-  const { isLoading } = useUserStore();
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -27,18 +25,6 @@ export default function AppLayout({
 
     return () => ctx.revert();
   }, []);
-
-  // Show loading spinner while auth is initializing
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-[#0a1628] via-[#071020] to-[#030812] flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-400">Loading your account...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0a1628] via-[#071020] to-[#030812] text-white overflow-hidden">

@@ -15,19 +15,19 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     // Get initial session
     const initAuth = async () => {
       try {
+        // Set loading false immediately to show UI
+        setLoading(false);
+        
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         
         if (userError) {
           console.error('Error fetching user:', userError);
-          if (mounted) {
-            setUser(null);
-            setLoading(false);
-          }
+          if (mounted) setUser(null);
           return;
         }
         
         if (user) {
-          // Fetch user profile
+          // Fetch user profile in background
           const { data: profile, error: profileError } = await supabase
             .from('users')
             .select('*')
@@ -36,24 +36,19 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
           
           if (profileError) {
             console.error('Error fetching profile:', profileError);
+            if (mounted) setUser(null);
+            return;
           }
           
-          if (mounted) {
-            setUser(profile || null);
-            setLoading(false);
+          if (mounted && profile) {
+            setUser(profile);
           }
         } else {
-          if (mounted) {
-            setUser(null);
-            setLoading(false);
-          }
+          if (mounted) setUser(null);
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
-        if (mounted) {
-          setUser(null);
-          setLoading(false);
-        }
+        if (mounted) setUser(null);
       }
     };
     
